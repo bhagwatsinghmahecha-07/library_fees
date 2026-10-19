@@ -73,16 +73,16 @@ export default function StudentCard({ s, settings, onChange, onEdit, advance = f
       </div>
       {s.status === 'Active' && (
         <p className={`mt-2 text-sm font-bold ${due ? (late > 0 ? 'text-red-700' : 'text-amber-700') : 'text-slate-600'}`}>
-          {due ? (late > 0 ? `Overdue by ${late} day${late > 1 ? 's' : ''}` : 'Due today') : 'Next due'} · {fmtDate(s.next_due_date)}
+          {due ? (late > 0 ? `Overdue by ${late} day${late > 1 ? 's' : ''}` : 'Due today') : (late >= -2 ? `${-late} day${late < -1 ? 's' : ''} left` : 'Next due')} · {fmtDate(s.next_due_date)}
         </p>
       )}
-      {s.advance_sent_for === s.next_due_date && s.advance_sent_on && <p className="text-sm text-slate-500">Advance reminder sent on {fmtDate(s.advance_sent_on)}</p>}
+      {s.advance_sent_for === s.next_due_date && s.advance_sent_on && <p className="text-sm text-slate-500">Reminder sent on {fmtDate(s.advance_sent_on)}</p>}
       {s.reminder_sent_on && due && <p className="text-sm text-slate-500">Reminder sent on {fmtDate(s.reminder_sent_on)}</p>}
       {err && !confirmDel && pay === null && <p className="mt-2 text-sm text-red-700">{err}</p>}
       <div className="mt-3 flex flex-wrap gap-2">
         {s.status === 'Active' && <button className="btn-primary" onClick={() => { setErr(''); setPay(String(s.monthly_fee)) }}>Mark as paid</button>}
         {due && <button className="btn-ghost" onClick={sendWhatsApp}>Send WhatsApp</button>}
-        {advance && <button className="btn-ghost" onClick={sendAdvance}>Send advance reminder</button>}
+        {advance && <button className="btn-ghost" onClick={sendAdvance}>Send reminder</button>}
         <button className="btn-ghost" onClick={toggleHistory}>{history ? 'Hide history' : 'History'}</button>
         {onEdit && <button className="btn-ghost" onClick={() => onEdit(s)}>Edit</button>}
         {onEdit && <button className="btn-danger" onClick={() => setConfirmDel(true)}>Delete</button>}

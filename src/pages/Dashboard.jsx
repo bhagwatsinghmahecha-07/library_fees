@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useData } from '../lib/data'
-import { daysLate, isUpcoming, libOf, seatsFor } from '../lib/utils'
+import { isUpcoming, libOf, seatsFor } from '../lib/utils'
 import { DueCards, dueStudents } from '../components/DueList'
 import Sheet from '../components/Sheet'
 import LibraryBreakdown from '../components/LibraryBreakdown'
@@ -18,8 +18,6 @@ export default function Dashboard() {
   const [open, setOpen] = useState(null) // { type, lib? }
   const active = students.filter((s) => s.status === 'Active')
   const dueList = dueStudents(students)
-  const today = dueList.filter((s) => daysLate(s.next_due_date) === 0)
-  const overdue = dueList.filter((s) => daysLate(s.next_due_date) > 0)
   const soon = students.filter(isUpcoming).sort((a, b) => a.next_due_date.localeCompare(b.next_due_date))
   const inLib = (lib) => active.filter((s) => libOf(s) === lib)
   const close = () => setOpen(null)
@@ -68,7 +66,7 @@ export default function Dashboard() {
       </Sheet>
     )
   } else if (open) {
-    const cfg = { today: ['Due today', today, false, 'No fees are due today.'], overdue: ['Overdue', overdue, false, 'Nothing is overdue.'], soon: ['Due in next 2 days', soon, true, 'No fees fall due in the next 2 days.'] }[open.type]
+    const cfg = { overdue: ['Overdue (including due today)', dueList, false, 'No overdue fees.'], soon: ['2 days left', soon, true, 'Nobody has 2 days or less left.'] }[open.type]
     sheet = <Sheet title={`${cfg[0]} (${cfg[1].length})`} onClose={close}><DueCards list={cfg[1]} settings={settings} onChange={reload} advance={cfg[2]} empty={cfg[3]} /></Sheet>
   }
 
@@ -80,16 +78,15 @@ export default function Dashboard() {
         <Stat label="Active students" value={active.length} onClick={() => setOpen({ type: 'active' })} />
         <Stat label="Lockers in use" value={active.filter((s) => s.locker).length} onClick={() => setOpen({ type: 'lockers' })} />
         {['Normal', 'Premium'].map(libStat)}
-        <Stat label="Due today" value={today.length} tone="#b45309" onClick={() => setOpen({ type: 'today' })} />
-        <Stat label="Overdue" value={overdue.length} tone="#b91c1c" onClick={() => setOpen({ type: 'overdue' })} />
-        <Stat label="Due in next 2 days" value={soon.length} onClick={() => setOpen({ type: 'soon' })} />
+        <Stat label="2 days left" value={soon.length} onClick={() => setOpen({ type: 'soon' })} />
+        <Stat label="Overdue" value={dueList.length} tone="#b91c1c" onClick={() => setOpen({ type: 'overdue' })} />
       </div>
       <section>
         <div className="mb-2 flex items-center justify-between">
-          <h2 className="text-lg font-bold">Fees to collect ({dueList.length})</h2>
-          <Link to="/due" className="text-sm font-bold text-brand underline">Open Due list</Link>
+          <h2 className="text-lg font-bold">Overdue fees ({dueList.length})</h2>
+          <Link to="/reminders" className="text-sm font-bold text-brand underline">Open Reminders</Link>
         </div>
-        <p className="mb-2 text-sm text-slate-500">This list is always here, even if the 9 AM WhatsApp alert does not arrive.</p>
+        <p className="mb-2 text-sm text-slate-500">Includes fees due today. This list is always here, even if the 9 AM WhatsApp alert does not arrive.</p>
         <DueCards list={dueList} settings={settings} onChange={reload} />
       </section>
       {sheet}

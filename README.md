@@ -50,6 +50,11 @@ Chrome (Android): menu → **Add to Home screen / Install app**. iPhone: Safari 
 ### 7. First use
 Sign in → **Settings**: set your name, WhatsApp number, the number of seats in each library, the monthly price for each option (Normal, Normal + locker, Premium, Premium + locker), the reminder messages → **Students → Add student**.
 
+## Sign in and password reset
+- Sign in with the owner's email, or with the WhatsApp number saved in Settings (save Settings once after signing in).
+- **Forgot password?** sends a reset link to the owner's email. A text-message code is not possible on the free plan.
+- After updating, paste `firestore.rules` again in Firebase (with the owner UID) and Publish. It adds the phone sign-in lookup.
+
 ## How it works
 - Two libraries, Normal and Premium, each with its own seat numbers (Normal seat 5 and Premium seat 5 can both be taken). Each student is with or without a locker. Choosing the library and locker on a new student fills in the price from Settings, and you can still change it for one student.
 - New student: next due date = joining date + 1 month. **Mark as paid** saves a payment (date + amount) and moves the due date forward 1 month. A student 3 months behind needs 3 payments recorded, one per month.

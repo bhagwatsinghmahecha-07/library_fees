@@ -1,7 +1,12 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Only the owner's login can read or write anything.
+    // Phone-number sign-in: anyone can look up ONE alias by its exact number (no listing). Only the owner can write.
+    match /loginAliases/{phone} {
+      allow get: if true;
+      allow write: if request.auth != null && request.auth.uid == 'PASTE_OWNER_UID_HERE';
+    }
+    // Everything else: owner only.
     // Replace PASTE_OWNER_UID_HERE with the User UID from Firebase > Authentication > Users.
     match /{document=**} {
       allow read, write: if request.auth != null && request.auth.uid == 'PASTE_OWNER_UID_HERE';

@@ -1,6 +1,6 @@
 // Runs every day from GitHub Actions. Sends ONE WhatsApp message to the owner via CallMeBot:
 //  - students due today or overdue
-//  - students whose fee falls due in exactly 2 days (time to send the advance reminder)
+//  - students with 2 days or less left who have not been reminded yet
 import { initializeApp, cert } from 'firebase-admin/app'
 import { getFirestore } from 'firebase-admin/firestore'
 
@@ -20,7 +20,7 @@ try {
   const all = snap.docs.map((d) => d.data()).filter((s) => s.status === 'Active')
     .sort((a, b) => a.next_due_date.localeCompare(b.next_due_date))
   due = all.filter((s) => s.next_due_date <= today)
-  soon = all.filter((s) => s.next_due_date === plus2)
+  soon = all.filter((s) => s.next_due_date > today && s.advance_sent_for !== s.next_due_date) // 1-2 days left, not reminded yet
 } catch (e) { console.error('Firebase error:', e.message); process.exit(1) }
 
 if (!due.length && !soon.length) { console.log('Nobody is due or due in 2 days. No message sent.'); process.exit(0) }
@@ -28,9 +28,9 @@ if (!due.length && !soon.length) { console.log('Nobody is due or due in 2 days. 
 const days = (d) => Math.round((new Date(today) - new Date(d)) / 86400000)
 const who = (s) => `${s.full_name}, ${s.library || 'Normal'}${s.locker ? '+Locker' : ''} Seat ${s.seat_no}, ${s.phone}, Rs ${Number(s.monthly_fee)}`
 const parts = []
-if (due.length) parts.push([`Library fees due: ${due.length}`, ...due.map((s) => `• ${who(s)} (${days(s.next_due_date) > 0 ? `${days(s.next_due_date)}d overdue` : 'due today'})`)].join('\n'))
-if (soon.length) parts.push([`Due in 2 days (${plus2.split('-').reverse().join('-')}), send advance reminder: ${soon.length}`, ...soon.map((s) => `• ${who(s)}`)].join('\n'))
-if (SITE_URL) parts.push(`Open: ${SITE_URL.replace(/\/$/, '')}/#/due`)
+if (due.length) parts.push([`Overdue or due today: ${due.length}`, ...due.map((s) => `• ${who(s)} (${days(s.next_due_date) > 0 ? `${days(s.next_due_date)}d overdue` : 'due today'})`)].join('\n'))
+if (soon.length) parts.push([`2 days left, send reminder: ${soon.length}`, ...soon.map((s) => `• ${who(s)} (due ${s.next_due_date.split('-').reverse().join('-')})`)].join('\n'))
+if (SITE_URL) parts.push(`Open: ${SITE_URL.replace(/\/$/, '')}/#/reminders`)
 const text = parts.join('\n\n')
 
 const url = `https://api.callmebot.com/whatsapp.php?phone=${encodeURIComponent(CALLMEBOT_PHONE)}&text=${encodeURIComponent(text)}&apikey=${encodeURIComponent(CALLMEBOT_API_KEY)}`
