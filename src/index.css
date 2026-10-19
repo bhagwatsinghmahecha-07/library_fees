@@ -1,0 +1,11 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+@layer components {
+  .btn { @apply rounded-lg px-3 py-2 text-sm font-bold focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand disabled:opacity-50; }
+  .btn-primary { @apply btn bg-brand text-white; }
+  .btn-ghost { @apply btn bg-white text-ink ring-1 ring-slate-300; }
+  .btn-danger { @apply btn bg-white text-red-700 ring-1 ring-red-300; }
+  .input { @apply w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-base focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/30; }
+  .card { @apply rounded-xl bg-white p-4 ring-1 ring-slate-200; }
+}
