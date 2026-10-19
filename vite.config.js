@@ -7,6 +7,7 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'autoUpdate',
+      workbox: { clientsClaim: true, skipWaiting: true, cleanupOutdatedCaches: true },
       manifest: {
         name: 'Library Fees', short_name: 'Library', description: 'Manage students and monthly fees',
         display: 'standalone', start_url: '/', background_color: '#f3f5f7', theme_color: '#14213d',

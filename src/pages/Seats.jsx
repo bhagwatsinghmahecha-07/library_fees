@@ -13,7 +13,7 @@ export default function Seats() {
     <div className="space-y-3">
       <h1 className="text-2xl font-bold">Seats</h1>
       <div className="flex gap-2">{['Normal', 'Premium'].map((x) => <button key={x} onClick={() => setLib(x)} className={lib === x ? 'btn-primary' : 'btn-ghost'}>{x}</button>)}</div>
-      <p className="text-sm text-slate-600">{active.length} taken, {Math.max(total - active.length, 0)} free. Green = taken, red outline = fee due, grey = empty.</p>
+      <p className="text-sm text-slate-600">{active.length} taken ({active.filter((s) => s.locker).length} with locker, {active.filter((s) => !s.locker).length} without), {Math.max(total - active.length, 0)} free. Green = taken, red outline = fee due, grey = empty.</p>
       <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
         {seats.map((n) => {
           const s = bySeat[n]

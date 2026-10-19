@@ -2,22 +2,30 @@ import { useState } from 'react'
 import { addDoc, collection, doc, serverTimestamp, updateDoc } from 'firebase/firestore'
 import { db } from '../lib/firebase'
 import { useData } from '../lib/data'
-import { addMonths, defaultFee, libOf, seatsFor, today } from '../lib/utils'
+import { LIBS, addMonths, defaultFee, libOf, seatsFor, today } from '../lib/utils'
 import StudentCard from '../components/StudentCard'
+import Sheet from '../components/Sheet'
 
 const blank = () => ({ full_name: '', phone: '+91', seat_no: '', joined_on: today(), monthly_fee: '', status: 'Active', library: 'Normal', locker: false })
+
+const Seg = ({ options, value, onChange }) => (
+  <div className="mt-1 grid grid-cols-2 gap-2">
+    {options.map(([v, label]) => <button type="button" key={label} aria-pressed={value === v} onClick={() => onChange(v)} className={value === v ? 'btn-primary' : 'btn-ghost'}>{label}</button>)}
+  </div>
+)
 
 function Form({ initial, settings, students, onClose, onSaved }) {
   const [f, setF] = useState(initial)
   const [err, setErr] = useState('')
+  const [busy, setBusy] = useState(false)
+  const editing = !!initial.id
   const set = (k) => (e) => setF({ ...f, [k]: e.target.value })
   // Changing library or locker on a NEW student fills in that option's price from Settings (still editable)
   const change = (patch) => {
     const n = { ...f, ...patch }
-    if (!initial.id) { const d = defaultFee(settings, n.library, n.locker); if (d !== '') n.monthly_fee = d }
+    if (!editing) { const d = defaultFee(settings, n.library, n.locker); if (d !== '') n.monthly_fee = d }
     setF(n)
   }
-  const editing = !!initial.id
 
   async function save(e) {
     e.preventDefault(); setErr('')
@@ -27,39 +35,33 @@ function Form({ initial, settings, students, onClose, onSaved }) {
     if (f.status === 'Active' && students.some((x) => x.status === 'Active' && libOf(x) === f.library && x.seat_no === seat && x.id !== initial.id))
       return setErr(`${f.library} seat ${seat} already has an Active student.`)
     const row = { full_name: f.full_name.trim(), phone: f.phone.trim(), seat_no: seat, joined_on: f.joined_on, monthly_fee: Number(f.monthly_fee), status: f.status, library: f.library, locker: !!f.locker }
+    setBusy(true)
     try {
       // New student: first due date is 1 month after joining. Editing never changes the due date.
       if (editing) await updateDoc(doc(db, 'students', initial.id), row)
       else await addDoc(collection(db, 'students'), { ...row, next_due_date: addMonths(f.joined_on, 1), reminder_sent_on: null, created_at: serverTimestamp() })
-    } catch (ex) { return setErr(ex.message) }
-    onSaved()
+      onSaved()
+    } catch (ex) { setErr(ex.message); setBusy(false) }
   }
   return (
-    <div className="fixed inset-0 z-10 overflow-y-auto bg-black/50 p-4">
-      <form onSubmit={save} className="card mx-auto max-w-md space-y-3">
-        <h2 className="text-xl font-bold">{editing ? 'Edit student' : 'Add student'}</h2>
-        <div className="grid grid-cols-2 gap-3">
-          <label className="block text-sm font-bold">Library
-            <select className="input mt-1 font-normal" value={f.library} onChange={(e) => change({ library: e.target.value })}><option>Normal</option><option>Premium</option></select>
-          </label>
-          <label className="block text-sm font-bold">Locker
-            <select className="input mt-1 font-normal" value={f.locker ? 'yes' : 'no'} onChange={(e) => change({ locker: e.target.value === 'yes' })}><option value="no">Without locker</option><option value="yes">With locker</option></select>
-          </label>
-        </div>
+    <Sheet title={editing ? 'Edit student' : 'Add student'} onClose={onClose}>
+      <form onSubmit={save} className="space-y-3">
+        <div className="text-sm font-bold">Library<Seg options={[['Normal', 'Normal'], ['Premium', 'Premium']]} value={f.library} onChange={(v) => change({ library: v })} /></div>
+        <div className="text-sm font-bold">Locker<Seg options={[[false, 'Without locker'], [true, 'With locker']]} value={!!f.locker} onChange={(v) => change({ locker: v })} /></div>
         <label className="block text-sm font-bold">Full name<input className="input mt-1 font-normal" required value={f.full_name} onChange={set('full_name')} /></label>
         <label className="block text-sm font-bold">WhatsApp number (with country code)<input className="input mt-1 font-normal" required inputMode="tel" value={f.phone} onChange={set('phone')} /></label>
         <div className="grid grid-cols-2 gap-3">
-          <label className="block text-sm font-bold">Seat number<input className="input mt-1 font-normal" required type="number" min="1" value={f.seat_no} onChange={set('seat_no')} /></label>
-          <label className="block text-sm font-bold">Monthly fee (₹)<input className="input mt-1 font-normal" required type="number" min="0" value={f.monthly_fee} onChange={set('monthly_fee')} /></label>
+          <label className="block text-sm font-bold">Seat number<input className="input mt-1 font-normal" required type="number" inputMode="numeric" min="1" value={f.seat_no} onChange={set('seat_no')} /></label>
+          <label className="block text-sm font-bold">Monthly fee (₹)<input className="input mt-1 font-normal" required type="number" inputMode="decimal" min="0" value={f.monthly_fee} onChange={set('monthly_fee')} /></label>
         </div>
         <label className="block text-sm font-bold">Date of joining<input className="input mt-1 font-normal" required type="date" value={f.joined_on} onChange={set('joined_on')} /></label>
         <label className="block text-sm font-bold">Status
           <select className="input mt-1 font-normal" value={f.status} onChange={set('status')}><option>Active</option><option>Left</option></select>
         </label>
         {err && <p className="text-sm text-red-700">{err}</p>}
-        <div className="flex gap-2"><button className="btn-primary flex-1">Save student</button><button type="button" className="btn-ghost" onClick={onClose}>Cancel</button></div>
+        <button className="btn-primary w-full" disabled={busy}>{busy ? 'Saving…' : 'Save student'}</button>
       </form>
-    </div>
+    </Sheet>
   )
 }
 
@@ -70,18 +72,40 @@ export default function Students() {
   const [lib, setLib] = useState('All')
   const [form, setForm] = useState(null)
   const term = q.trim().toLowerCase()
-  const list = students.filter((s) =>
-    (filter === 'All' || s.status === filter) && (lib === 'All' || libOf(s) === lib) &&
-    (!term || s.full_name.toLowerCase().includes(term) || s.phone.replace(/\D/g, '').includes(term.replace(/\D/g, '') || '§') || String(s.seat_no) === term))
+  const digits = term.replace(/\D/g, '')
+  const visible = students.filter((s) =>
+    (filter === 'All' || s.status === filter) &&
+    (!term || s.full_name.toLowerCase().includes(term) || (digits && s.phone.replace(/\D/g, '').includes(digits)) || String(s.seat_no) === term))
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-4">
       <div className="flex items-center justify-between"><h1 className="text-2xl font-bold">Students</h1><button className="btn-primary" onClick={() => setForm({ ...blank(), monthly_fee: defaultFee(settings, 'Normal', false) })}>Add student</button></div>
       <input className="input" type="search" placeholder="Search name, phone or seat number" value={q} onChange={(e) => setQ(e.target.value)} />
-      <div className="flex gap-2">{['Active', 'Left', 'All'].map((x) => <button key={x} onClick={() => setFilter(x)} className={filter === x ? 'btn-primary' : 'btn-ghost'}>{x}</button>)}</div>
-      <div className="flex gap-2">{['All', 'Normal', 'Premium'].map((x) => <button key={x} onClick={() => setLib(x)} className={lib === x ? 'btn-primary' : 'btn-ghost'}>{x === 'All' ? 'Both libraries' : x}</button>)}</div>
-      {list.length === 0 && <p className="card text-slate-600">No students found. Tap “Add student” to create one.</p>}
-      {list.map((s) => <StudentCard key={s.id} s={s} settings={settings} onChange={reload} onEdit={(st) => setForm({ ...st, library: libOf(st), locker: !!st.locker })} />)}
+      <div className="flex flex-wrap gap-2">
+        {['Active', 'Left', 'All'].map((x) => <button key={x} onClick={() => setFilter(x)} className={filter === x ? 'btn-primary' : 'btn-ghost'}>{x}</button>)}
+        <span className="w-2" />
+        {['All', ...LIBS].map((x) => <button key={x} onClick={() => setLib(x)} className={lib === x ? 'btn-primary' : 'btn-ghost'}>{x === 'All' ? 'Both libraries' : x}</button>)}
+      </div>
+      {visible.length === 0 && <p className="card text-slate-600">No students found. Tap “Add student” to create one.</p>}
+      {LIBS.filter((l) => lib === 'All' || l === lib).map((l) => {
+        const inLib = visible.filter((s) => libOf(s) === l)
+        if (!inLib.length) return null
+        return (
+          <section key={l} className="space-y-3">
+            <h2 className="rounded-lg bg-ink px-3 py-2 text-lg font-bold text-white">{l} library · {inLib.length}</h2>
+            {[[true, 'With locker'], [false, 'Without locker']].map(([lk, label]) => {
+              const g = inLib.filter((s) => !!s.locker === lk).sort((a, b) => a.seat_no - b.seat_no)
+              if (!g.length) return null
+              return (
+                <div key={label} className="space-y-3">
+                  <h3 className="text-sm font-bold text-slate-600">{label} ({g.length})</h3>
+                  {g.map((s) => <StudentCard key={s.id} s={s} settings={settings} onChange={reload} onEdit={(st) => setForm({ ...st, library: libOf(st), locker: !!st.locker })} />)}
+                </div>
+              )
+            })}
+          </section>
+        )
+      })}
       {form && <Form initial={form} settings={settings} students={students} onClose={() => setForm(null)} onSaved={() => { setForm(null); reload() }} />}
     </div>
   )
