@@ -51,3 +51,18 @@ export function seatConflict(cand, others) {
   if (clash) return `${clash.full_name} already has this seat from ${timing(clash)}. Choose a different time or seat.`
   return ''
 }
+
+// ---- Billing cycle: due date = joining date + 1 month; paying moves BOTH forward one month ----
+export const dayOf = (iso) => Number(iso.slice(8, 10))
+// Add n months but land on `day` (clamped to the month's length, so a 31st becomes 28/29/30 only when needed)
+export function addMonthsDay(iso, n, day) {
+  const [y, m] = iso.split('-').map(Number)
+  const last = new Date(y, m - 1 + n + 1, 0).getDate()
+  return toISO(new Date(y, m - 1 + n, Math.min(day, last)))
+}
+// What a student's dates become when a fee is paid
+export function nextCycle(s) {
+  const first = s.first_joined_on || s.joined_on
+  const day = s.cycle_day || dayOf(first)
+  return { joined_on: s.next_due_date, first_joined_on: first, cycle_day: day, next_due_date: addMonthsDay(s.next_due_date, 1, day) }
+}

@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { addDoc, collection, doc, serverTimestamp, updateDoc } from 'firebase/firestore'
 import { db } from '../lib/firebase'
 import { useData } from '../lib/data'
-import { addMonths, planOf, seatConflict, today } from '../lib/utils'
+import { addMonthsDay, dayOf, fmtDate, planOf, seatConflict, today } from '../lib/utils'
 import StudentCard from '../components/StudentCard'
 import Sheet from '../components/Sheet'
 
@@ -48,9 +48,19 @@ function Form({ initial, settings, students, onClose, onSaved }) {
     }
     setBusy(true)
     try {
-      // New student: first due date is 1 month after joining. Editing never changes the due date.
-      if (editing) await updateDoc(doc(db, 'students', initial.id), row)
-      else await addDoc(collection(db, 'students'), { ...row, next_due_date: addMonths(f.joined_on, 1), reminder_sent_on: null, created_at: serverTimestamp() })
+      // Due date is always 1 month after the date of joining.
+      // Editing a student only moves the due date if the joining date itself was changed.
+      if (editing) {
+        const changed = f.joined_on !== initial.joined_on
+        const neverPaid = !initial.first_joined_on || initial.first_joined_on === initial.joined_on
+        const extra = changed ? {
+          cycle_day: dayOf(f.joined_on), next_due_date: addMonthsDay(f.joined_on, 1, dayOf(f.joined_on)), reminder_sent_on: null,
+          ...(neverPaid ? { first_joined_on: f.joined_on } : {})
+        } : {}
+        await updateDoc(doc(db, 'students', initial.id), { ...row, ...extra })
+      } else {
+        await addDoc(collection(db, 'students'), { ...row, first_joined_on: f.joined_on, cycle_day: dayOf(f.joined_on), next_due_date: addMonthsDay(f.joined_on, 1, dayOf(f.joined_on)), reminder_sent_on: null, created_at: serverTimestamp() })
+      }
       onSaved()
     } catch (ex) { setErr(ex.message); setBusy(false) }
   }
@@ -70,7 +80,11 @@ function Form({ initial, settings, students, onClose, onSaved }) {
           <label className="block text-sm font-bold">Seat number<input className="input mt-1 font-normal" required type="number" inputMode="numeric" min="1" value={f.seat_no} onChange={set('seat_no')} /></label>
           <label className="block text-sm font-bold">Monthly fee (₹)<input className="input mt-1 font-normal" required type="number" inputMode="decimal" min="0" value={f.monthly_fee} onChange={set('monthly_fee')} /></label>
         </div>
-        <label className="block text-sm font-bold">Date of joining<input className="input mt-1 font-normal" required type="date" value={f.joined_on} onChange={set('joined_on')} /></label>
+        <label className="block text-sm font-bold">Date of joining<input className="input mt-1 font-normal" required type="date" value={f.joined_on} onChange={set('joined_on')} />
+          {f.joined_on && (!editing || f.joined_on !== initial.joined_on)
+            ? <span className="text-xs font-normal text-slate-500">Next due date will be {fmtDate(addMonthsDay(f.joined_on, 1, dayOf(f.joined_on)))} (one month after joining).</span>
+            : <span className="text-xs font-normal text-slate-500">Due date stays {fmtDate(initial.next_due_date)} unless you change this date.</span>}
+        </label>
         <label className="block text-sm font-bold">Status
           <select className="input mt-1 font-normal" value={f.status} onChange={set('status')}><option>Active</option><option>Left</option></select>
         </label>

@@ -57,7 +57,8 @@ Sign in → **Settings**: set your name, WhatsApp number, the number of seats in
 
 ## How it works
 - One library with a number of seats you can change in Settings (Active students each need a different seat). Each student is Full time or Half time. Half-time students have a From and To time, and two half-time students can share one seat when their times do not overlap. The fee for each plan is set in Settings and fills in for new students (editable per student).
-- New student: next due date = joining date + 1 month. **Mark as paid** saves a payment (date + amount) and moves the due date forward 1 month. A student 3 months behind needs 3 payments recorded, one per month.
+- Due date is always one month after the date of joining. Mark as paid moves the joining date forward one month and the due date one month after that (joined 20 Oct, due 20 Nov). The original joining date is kept as "First joined". Editing a student only moves the due date if the joining date is changed.
+- (older note) New student: next due date = joining date + 1 month. **Mark as paid** saves a payment (date + amount) and moves the due date forward 1 month. A student 3 months behind needs 3 payments recorded, one per month.
 - **Advance reminder:** students whose fee falls due in the next 2 days appear on the Due list page under "Coming up". Tap **Send advance reminder** to open WhatsApp with a ready message (name, amount, due date, seat). The text is editable in Settings. The 9 AM alert to the owner also lists everyone whose fee is due in exactly 2 days, so the owner knows when to send them.
 - **Send WhatsApp** opens `wa.me` with the message filled in, then records "Reminder sent on <date>". The owner still has to press Send in WhatsApp.
 - **Fallback:** the Home page always lists everyone due or overdue, so nothing is missed if CallMeBot fails. A failed alert also shows as a red failed run in GitHub, and GitHub emails you.

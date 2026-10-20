@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { collection, doc, getDocs, orderBy, query, runTransaction, serverTimestamp, updateDoc, writeBatch } from 'firebase/firestore'
 import { db } from '../lib/firebase'
-import { addMonths, daysLate, fillMessage, fmtDate, isDue, planLabel, rupees, today, waLink } from '../lib/utils'
+import { daysLate, nextCycle, fillMessage, fmtDate, isDue, planLabel, rupees, today, waLink } from '../lib/utils'
 import Sheet from './Sheet'
 
 export default function StudentCard({ s, settings, onChange, onEdit, advance = false }) {
@@ -23,7 +23,7 @@ export default function StudentCard({ s, settings, onChange, onEdit, advance = f
         const ref = doc(db, 'students', s.id)
         const snap = await tx.get(ref)
         tx.set(doc(collection(db, 'students', s.id, 'payments')), { paid_on: today(), amount, created_at: serverTimestamp() })
-        tx.update(ref, { next_due_date: addMonths(snap.data().next_due_date, 1), reminder_sent_on: null })
+        tx.update(ref, { ...nextCycle(snap.data()), reminder_sent_on: null })
       })
       setPay(null); setHistory(null); onChange()
     } catch (ex) { setErr(ex.message) }
@@ -76,6 +76,7 @@ export default function StudentCard({ s, settings, onChange, onEdit, advance = f
           {due ? (late > 0 ? `Overdue by ${late} day${late > 1 ? 's' : ''}` : 'Due today') : (late >= -2 ? `${-late} day${late < -1 ? 's' : ''} left` : 'Next due')} · {fmtDate(s.next_due_date)}
         </p>
       )}
+      <p className="text-xs text-slate-500">Joining date {fmtDate(s.joined_on)}{s.first_joined_on && s.first_joined_on !== s.joined_on ? ` · First joined ${fmtDate(s.first_joined_on)}` : ''}</p>
       {s.advance_sent_for === s.next_due_date && s.advance_sent_on && <p className="text-sm text-slate-500">Reminder sent on {fmtDate(s.advance_sent_on)}</p>}
       {s.reminder_sent_on && due && <p className="text-sm text-slate-500">Reminder sent on {fmtDate(s.reminder_sent_on)}</p>}
       {err && !confirmDel && pay === null && <p className="mt-2 text-sm text-red-700">{err}</p>}
@@ -100,7 +101,7 @@ export default function StudentCard({ s, settings, onChange, onEdit, advance = f
             <label className="block text-sm font-bold">Amount received (₹)
               <input className="input mt-1 font-normal" type="number" inputMode="decimal" min="0" autoFocus value={pay} onChange={(e) => setPay(e.target.value)} />
             </label>
-            <p className="text-sm text-slate-600">Next due date moves to {fmtDate(addMonths(s.next_due_date, 1))}.</p>
+            <p className="text-sm text-slate-600">Joining date becomes {fmtDate(nextCycle(s).joined_on)} and the next due date {fmtDate(nextCycle(s).next_due_date)}.</p>
             {err && <p className="text-sm text-red-700">{err}</p>}
             <button className="btn-primary w-full" disabled={busy}>{busy ? 'Saving…' : 'Save payment'}</button>
           </form>
