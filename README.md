@@ -56,7 +56,7 @@ Sign in → **Settings**: set your name, WhatsApp number, the number of seats in
 - After updating, paste `firestore.rules` again in Firebase (with the owner UID) and Publish. It adds the phone sign-in lookup.
 
 ## How it works
-- One library with a number of seats you can change in Settings (Active students each need a different seat). The default monthly fee in Settings fills in for new students, and you can still change it for one student.
+- One library with a number of seats you can change in Settings (Active students each need a different seat). Each student is Full time or Half time. Half-time students have a From and To time, and two half-time students can share one seat when their times do not overlap. The fee for each plan is set in Settings and fills in for new students (editable per student).
 - New student: next due date = joining date + 1 month. **Mark as paid** saves a payment (date + amount) and moves the due date forward 1 month. A student 3 months behind needs 3 payments recorded, one per month.
 - **Advance reminder:** students whose fee falls due in the next 2 days appear on the Due list page under "Coming up". Tap **Send advance reminder** to open WhatsApp with a ready message (name, amount, due date, seat). The text is editable in Settings. The 9 AM alert to the owner also lists everyone whose fee is due in exactly 2 days, so the owner knows when to send them.
 - **Send WhatsApp** opens `wa.me` with the message filled in, then records "Reminder sent on <date>". The owner still has to press Send in WhatsApp.

@@ -18,6 +18,7 @@ export function fillMessage(template, s, ownerName = '', libraryName = '') {
     .replaceAll('{name}', s.full_name).replaceAll('{amount}', Number(s.monthly_fee))
     .replaceAll('{due_date}', fmtDate(s.next_due_date)).replaceAll('{seat}', s.seat_no)
     .replaceAll(' {library}', '').replaceAll('{library}', '').replaceAll('{owner_name}', ownerName).replaceAll('{library_name}', libraryName)
+    .replaceAll('{plan}', planOf(s) === 'Half' ? 'Half time' : 'Full time').replaceAll('{timing}', timing(s))
 }
 export function waLink(phone, text) {
   let digits = phone.replace(/\D/g, '')
@@ -29,3 +30,24 @@ export function waLink(phone, text) {
 // Advance reminder window: fee falls due tomorrow or the day after
 export const addDays = (iso, n) => { const [y, m, d] = iso.split('-').map(Number); return toISO(new Date(y, m - 1, d + n)) }
 export const isUpcoming = (s) => s.status === 'Active' && s.next_due_date > today() && s.next_due_date <= addDays(today(), 2)
+
+// ---- Full time / Half time plans (half-time students have a From and To time) ----
+export const planOf = (s) => s.plan === 'Half' ? 'Half' : 'Full'
+export function fmtTime(hhmm) {
+  const [h, m] = String(hhmm).split(':').map(Number)
+  return `${h % 12 || 12}:${String(m).padStart(2, '0')} ${h >= 12 ? 'PM' : 'AM'}`
+}
+export const timing = (s) => planOf(s) === 'Half' && s.time_from && s.time_to ? `${fmtTime(s.time_from)} to ${fmtTime(s.time_to)}` : ''
+export const planLabel = (s) => planOf(s) === 'Half' ? `Half time${timing(s) ? ' · ' + timing(s) : ''}` : 'Full time'
+const overlaps = (a, b) => a.time_from < b.time_to && b.time_from < a.time_to
+
+// Can `cand` take a seat that `others` (Active students on that seat) already use? Returns '' if yes, else the reason.
+export function seatConflict(cand, others) {
+  if (!others.length) return ''
+  if (planOf(cand) === 'Full') return `This seat already has ${others[0].full_name}. A full-time student needs a seat to themselves.`
+  const full = others.find((o) => planOf(o) === 'Full')
+  if (full) return `${full.full_name} has this seat full time.`
+  const clash = others.find((o) => o.time_from && o.time_to && overlaps(cand, o))
+  if (clash) return `${clash.full_name} already has this seat from ${timing(clash)}. Choose a different time or seat.`
+  return ''
+}

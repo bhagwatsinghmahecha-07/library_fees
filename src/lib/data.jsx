@@ -6,7 +6,7 @@ const Ctx = createContext(null)
 export const useData = () => useContext(Ctx)
 
 const DEFAULTS = {
-  library_name: '', owner_name: '', owner_whatsapp: '', total_seats: 50, default_fee: '',
+  library_name: '', owner_name: '', owner_whatsapp: '', total_seats: 50, fee_full: '', fee_half: '', half_from: '08:00', half_to: '14:00',
   reminder_message: 'Hello {name}, your library fee of ₹{amount} is due. Please pay within 2 days.',
   advance_message: 'Hello {name}, this is a friendly reminder from {owner_name}. Your library fee of ₹{amount} (seat {seat}) is due on {due_date}. Please pay on or before the due date. Thank you!'
 }
@@ -23,7 +23,7 @@ export function DataProvider({ children }) {
     setStudents(st.docs.map((d) => ({ id: d.id, ...d.data() })).sort((a, b) => a.full_name.localeCompare(b.full_name)))
     const d = se.exists() ? se.data() : {}
     // older versions stored seats/fee under other names; keep them working
-    setSettings({ ...DEFAULTS, ...d, total_seats: d.total_seats ?? d.seats_normal ?? DEFAULTS.total_seats, default_fee: d.default_fee ?? d.fee_normal ?? '' })
+    setSettings({ ...DEFAULTS, ...d, total_seats: d.total_seats ?? d.seats_normal ?? DEFAULTS.total_seats, fee_full: d.fee_full ?? d.default_fee ?? d.fee_normal ?? '' })
     have.current = true; setError(''); setLoading(false)
   }
 

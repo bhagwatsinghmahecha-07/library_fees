@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { collection, doc, getDocs, orderBy, query, runTransaction, serverTimestamp, updateDoc, writeBatch } from 'firebase/firestore'
 import { db } from '../lib/firebase'
-import { addMonths, daysLate, fillMessage, fmtDate, isDue, rupees, today, waLink } from '../lib/utils'
+import { addMonths, daysLate, fillMessage, fmtDate, isDue, planLabel, rupees, today, waLink } from '../lib/utils'
 import Sheet from './Sheet'
 
 export default function StudentCard({ s, settings, onChange, onEdit, advance = false }) {
@@ -66,6 +66,7 @@ export default function StudentCard({ s, settings, onChange, onEdit, advance = f
       <div className="flex items-start justify-between gap-2">
         <div>
           <p className="text-lg font-bold">{s.full_name} <span className="text-sm font-normal text-slate-500">Seat {s.seat_no}</span></p>
+          <p className="mt-0.5 inline-block rounded bg-slate-100 px-2 py-0.5 text-xs font-bold text-slate-700">{planLabel(s)}</p>
           <p className="text-sm text-slate-600">{s.phone} · {rupees(s.monthly_fee)}/month</p>
         </div>
         <span className={`rounded-full px-2 py-0.5 text-xs font-bold ${s.status === 'Active' ? 'bg-teal-100 text-teal-800' : 'bg-slate-200 text-slate-600'}`}>{s.status}</span>
@@ -95,7 +96,7 @@ export default function StudentCard({ s, settings, onChange, onEdit, advance = f
       {pay !== null && (
         <Sheet title="Mark as paid" z="z-40" onClose={() => setPay(null)}>
           <form onSubmit={savePayment} className="space-y-3">
-            <p>{s.full_name} · Seat {s.seat_no}</p>
+            <p>{s.full_name} · Seat {s.seat_no} · {planLabel(s)}</p>
             <label className="block text-sm font-bold">Amount received (₹)
               <input className="input mt-1 font-normal" type="number" inputMode="decimal" min="0" autoFocus value={pay} onChange={(e) => setPay(e.target.value)} />
             </label>

@@ -28,7 +28,9 @@ try {
 if (!due.length && !soon.length) { console.log('Nobody is due or due in 2 days. No message sent.'); process.exit(0) }
 
 const days = (d) => Math.round((new Date(today) - new Date(d)) / 86400000)
-const who = (s) => `${s.full_name}, Seat ${s.seat_no}, ${s.phone}, Rs ${Number(s.monthly_fee)}`
+const t12 = (x) => { const [h, m] = x.split(':').map(Number); return `${h % 12 || 12}:${String(m).padStart(2, '0')}${h >= 12 ? 'PM' : 'AM'}` }
+const plan = (s) => s.plan === 'Half' ? `Half time${s.time_from && s.time_to ? ` ${t12(s.time_from)}-${t12(s.time_to)}` : ''}` : 'Full time'
+const who = (s) => `${s.full_name}, Seat ${s.seat_no}, ${plan(s)}, ${s.phone}, Rs ${Number(s.monthly_fee)}`
 const parts = []
 if (due.length) parts.push([`Overdue or due today: ${due.length}`, ...due.map((s) => `• ${who(s)} (${days(s.next_due_date) > 0 ? `${days(s.next_due_date)}d overdue` : 'due today'})`)].join('\n'))
 if (soon.length) parts.push([`2 days left, send reminder: ${soon.length}`, ...soon.map((s) => `• ${who(s)} (due ${s.next_due_date.split('-').reverse().join('-')})`)].join('\n'))
