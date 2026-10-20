@@ -25,7 +25,12 @@ const Icon = ({ name }) => <svg viewBox="0 0 24 24" className="h-6 w-6" fill="no
 const tabs = [['/', 'Home', 'home'], ['/students', 'Students', 'users'], ['/seats', 'Seats', 'seats'], ['/reminders', 'Reminders', 'bell'], ['/settings', 'Settings', 'settings']]
 
 function Shell() {
-  const { students, loading, error, retry } = useData()
+  const { students, settings, loading, error, retry } = useData()
+  useEffect(() => {
+    const name = settings?.library_name
+    document.title = name || 'Library Fees'
+    try { name ? localStorage.setItem('libraryName', name) : localStorage.removeItem('libraryName') } catch { /* storage not available */ }
+  }, [settings?.library_name])
   const badge = dueStudents(students).length + students.filter((s) => isUpcoming(s) && s.advance_sent_for !== s.next_due_date).length
   return (
     <div className="mx-auto min-h-screen max-w-3xl pb-8">

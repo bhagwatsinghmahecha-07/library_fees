@@ -13,9 +13,11 @@ const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata' }).for
 const plus2 = (() => { const d = new Date(today + 'T00:00:00Z'); d.setUTCDate(d.getUTCDate() + 2); return d.toISOString().slice(0, 10) })()
 initializeApp({ credential: cert(JSON.parse(FIREBASE_SERVICE_ACCOUNT)) })
 
-let due, soon
+let due, soon, libName = ''
 try {
   // Single-field filter (no index needed); "Left" students are skipped below.
+  const cfg = await getFirestore().doc('settings/main').get()
+  libName = cfg.exists ? (cfg.data().library_name || '') : ''
   const snap = await getFirestore().collection('students').where('next_due_date', '<=', plus2).get()
   const all = snap.docs.map((d) => d.data()).filter((s) => s.status === 'Active')
     .sort((a, b) => a.next_due_date.localeCompare(b.next_due_date))
@@ -26,10 +28,11 @@ try {
 if (!due.length && !soon.length) { console.log('Nobody is due or due in 2 days. No message sent.'); process.exit(0) }
 
 const days = (d) => Math.round((new Date(today) - new Date(d)) / 86400000)
-const who = (s) => `${s.full_name}, ${s.library || 'Normal'}${s.locker ? '+Locker' : ''} Seat ${s.seat_no}, ${s.phone}, Rs ${Number(s.monthly_fee)}`
+const who = (s) => `${s.full_name}, Seat ${s.seat_no}, ${s.phone}, Rs ${Number(s.monthly_fee)}`
 const parts = []
 if (due.length) parts.push([`Overdue or due today: ${due.length}`, ...due.map((s) => `• ${who(s)} (${days(s.next_due_date) > 0 ? `${days(s.next_due_date)}d overdue` : 'due today'})`)].join('\n'))
 if (soon.length) parts.push([`2 days left, send reminder: ${soon.length}`, ...soon.map((s) => `• ${who(s)} (due ${s.next_due_date.split('-').reverse().join('-')})`)].join('\n'))
+if (libName) parts.unshift(libName)
 if (SITE_URL) parts.push(`Open: ${SITE_URL.replace(/\/$/, '')}/#/reminders`)
 const text = parts.join('\n\n')
 

@@ -6,10 +6,9 @@ const Ctx = createContext(null)
 export const useData = () => useContext(Ctx)
 
 const DEFAULTS = {
-  owner_name: '', owner_whatsapp: '', seats_normal: 50, seats_premium: 20,
-  fee_normal: '', fee_normal_locker: '', fee_premium: '', fee_premium_locker: '',
+  library_name: '', owner_name: '', owner_whatsapp: '', total_seats: 50, default_fee: '',
   reminder_message: 'Hello {name}, your library fee of ₹{amount} is due. Please pay within 2 days.',
-  advance_message: 'Hello {name}, this is a friendly reminder from {owner_name}. Your {library} library fee of ₹{amount} (seat {seat}) is due on {due_date}. Please pay on or before the due date. Thank you!'
+  advance_message: 'Hello {name}, this is a friendly reminder from {owner_name}. Your library fee of ₹{amount} (seat {seat}) is due on {due_date}. Please pay on or before the due date. Thank you!'
 }
 const withTimeout = (p, ms = 15000) => Promise.race([p, new Promise((_, rej) => setTimeout(() => rej(new Error('Taking too long. Check your internet and try again.')), ms))])
 
@@ -22,7 +21,9 @@ export function DataProvider({ children }) {
 
   const apply = (st, se) => {
     setStudents(st.docs.map((d) => ({ id: d.id, ...d.data() })).sort((a, b) => a.full_name.localeCompare(b.full_name)))
-    setSettings({ ...DEFAULTS, ...(se.exists() ? se.data() : {}) })
+    const d = se.exists() ? se.data() : {}
+    // older versions stored seats/fee under other names; keep them working
+    setSettings({ ...DEFAULTS, ...d, total_seats: d.total_seats ?? d.seats_normal ?? DEFAULTS.total_seats, default_fee: d.default_fee ?? d.fee_normal ?? '' })
     have.current = true; setError(''); setLoading(false)
   }
 

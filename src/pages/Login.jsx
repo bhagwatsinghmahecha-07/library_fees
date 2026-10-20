@@ -31,6 +31,9 @@ export default function Login() {
   const [err, setErr] = useState('')
   const [info, setInfo] = useState('')
   const [busy, setBusy] = useState(false)
+  const [show, setShow] = useState(false)
+  let libName = ''
+  try { libName = localStorage.getItem('libraryName') || '' } catch { /* storage not available */ }
 
   async function signIn(e) {
     e.preventDefault(); setBusy(true); setErr('')
@@ -51,11 +54,16 @@ export default function Login() {
 
   return (
     <div className="mx-auto flex min-h-screen max-w-sm flex-col justify-center p-6">
-      <h1 className="mb-1 text-3xl font-bold">Library Fees</h1>
+      <h1 className="mb-1 text-3xl font-bold">{libName || 'Library Fees'}</h1>
       <p className="mb-6 text-slate-600">{mode === 'login' ? 'Sign in to manage students and fees.' : 'Enter your email or phone number. We will email you a link to set a new password.'}</p>
       <form onSubmit={mode === 'login' ? signIn : reset} className="space-y-3">
         <input className="input" type="text" inputMode="email" autoCapitalize="none" autoCorrect="off" placeholder="Email or phone number" autoComplete="username" required value={id} onChange={(e) => setId(e.target.value)} />
-        {mode === 'login' && <input className="input" type="password" placeholder="Password" autoComplete="current-password" required value={password} onChange={(e) => setPassword(e.target.value)} />}
+        {mode === 'login' && (
+          <div className="relative">
+            <input className="input pr-20" type={show ? 'text' : 'password'} placeholder="Password" autoComplete="current-password" required value={password} onChange={(e) => setPassword(e.target.value)} />
+            <button type="button" onClick={() => setShow(!show)} aria-pressed={show} className="absolute right-2 top-1/2 -translate-y-1/2 rounded px-2 py-1 text-sm font-bold text-brand">{show ? 'Hide' : 'Show'}</button>
+          </div>
+        )}
         {err && <p className="text-sm text-red-700">{err}</p>}
         {info && <p className="text-sm text-teal-800">{info}</p>}
         <button className="btn-primary w-full" disabled={busy}>{busy ? 'Please wait…' : mode === 'login' ? 'Sign in' : 'Send reset link'}</button>

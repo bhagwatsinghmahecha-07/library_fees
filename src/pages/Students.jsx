@@ -2,17 +2,11 @@ import { useState } from 'react'
 import { addDoc, collection, doc, serverTimestamp, updateDoc } from 'firebase/firestore'
 import { db } from '../lib/firebase'
 import { useData } from '../lib/data'
-import { LIBS, addMonths, defaultFee, libOf, seatsFor, today } from '../lib/utils'
+import { addMonths, today } from '../lib/utils'
 import StudentCard from '../components/StudentCard'
 import Sheet from '../components/Sheet'
 
-const blank = () => ({ full_name: '', phone: '+91', seat_no: '', joined_on: today(), monthly_fee: '', status: 'Active', library: 'Normal', locker: false })
-
-const Seg = ({ options, value, onChange }) => (
-  <div className="mt-1 grid grid-cols-2 gap-2">
-    {options.map(([v, label]) => <button type="button" key={label} aria-pressed={value === v} onClick={() => onChange(v)} className={value === v ? 'btn-primary' : 'btn-ghost'}>{label}</button>)}
-  </div>
-)
+const blank = (fee) => ({ full_name: '', phone: '+91', seat_no: '', joined_on: today(), monthly_fee: fee ?? '', status: 'Active' })
 
 function Form({ initial, settings, students, onClose, onSaved }) {
   const [f, setF] = useState(initial)
@@ -20,21 +14,15 @@ function Form({ initial, settings, students, onClose, onSaved }) {
   const [busy, setBusy] = useState(false)
   const editing = !!initial.id
   const set = (k) => (e) => setF({ ...f, [k]: e.target.value })
-  // Changing library or locker on a NEW student fills in that option's price from Settings (still editable)
-  const change = (patch) => {
-    const n = { ...f, ...patch }
-    if (!editing) { const d = defaultFee(settings, n.library, n.locker); if (d !== '') n.monthly_fee = d }
-    setF(n)
-  }
 
   async function save(e) {
     e.preventDefault(); setErr('')
     const seat = Number(f.seat_no)
-    const max = seatsFor(settings, f.library)
-    if (seat < 1 || seat > max) return setErr(`${f.library} library has seats 1 to ${max}.`)
-    if (f.status === 'Active' && students.some((x) => x.status === 'Active' && libOf(x) === f.library && x.seat_no === seat && x.id !== initial.id))
-      return setErr(`${f.library} seat ${seat} already has an Active student.`)
-    const row = { full_name: f.full_name.trim(), phone: f.phone.trim(), seat_no: seat, joined_on: f.joined_on, monthly_fee: Number(f.monthly_fee), status: f.status, library: f.library, locker: !!f.locker }
+    const max = Number(settings.total_seats)
+    if (seat < 1 || seat > max) return setErr(`Seat must be between 1 and ${max}. You can change the number of seats in Settings.`)
+    if (f.status === 'Active' && students.some((x) => x.status === 'Active' && x.seat_no === seat && x.id !== initial.id))
+      return setErr(`Seat ${seat} already has an Active student.`)
+    const row = { full_name: f.full_name.trim(), phone: f.phone.trim(), seat_no: seat, joined_on: f.joined_on, monthly_fee: Number(f.monthly_fee), status: f.status }
     setBusy(true)
     try {
       // New student: first due date is 1 month after joining. Editing never changes the due date.
@@ -46,8 +34,6 @@ function Form({ initial, settings, students, onClose, onSaved }) {
   return (
     <Sheet title={editing ? 'Edit student' : 'Add student'} onClose={onClose}>
       <form onSubmit={save} className="space-y-3">
-        <div className="text-sm font-bold">Library<Seg options={[['Normal', 'Normal'], ['Premium', 'Premium']]} value={f.library} onChange={(v) => change({ library: v })} /></div>
-        <div className="text-sm font-bold">Locker<Seg options={[[false, 'Without locker'], [true, 'With locker']]} value={!!f.locker} onChange={(v) => change({ locker: v })} /></div>
         <label className="block text-sm font-bold">Full name<input className="input mt-1 font-normal" required value={f.full_name} onChange={set('full_name')} /></label>
         <label className="block text-sm font-bold">WhatsApp number (with country code)<input className="input mt-1 font-normal" required inputMode="tel" value={f.phone} onChange={set('phone')} /></label>
         <div className="grid grid-cols-2 gap-3">
@@ -69,43 +55,23 @@ export default function Students() {
   const { students, settings, reload } = useData()
   const [q, setQ] = useState('')
   const [filter, setFilter] = useState('Active')
-  const [lib, setLib] = useState('All')
   const [form, setForm] = useState(null)
   const term = q.trim().toLowerCase()
   const digits = term.replace(/\D/g, '')
-  const visible = students.filter((s) =>
-    (filter === 'All' || s.status === filter) &&
-    (!term || s.full_name.toLowerCase().includes(term) || (digits && s.phone.replace(/\D/g, '').includes(digits)) || String(s.seat_no) === term))
+  const list = students
+    .filter((s) => (filter === 'All' || s.status === filter) &&
+      (!term || s.full_name.toLowerCase().includes(term) || (digits && s.phone.replace(/\D/g, '').includes(digits)) || String(s.seat_no) === term))
+    .sort((a, b) => a.seat_no - b.seat_no)
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between"><h1 className="text-2xl font-bold">Students</h1><button className="btn-primary" onClick={() => setForm({ ...blank(), monthly_fee: defaultFee(settings, 'Normal', false) })}>Add student</button></div>
+      <div className="flex items-center justify-between"><h1 className="text-2xl font-bold">Students</h1><button className="btn-primary" onClick={() => setForm(blank(settings.default_fee))}>Add student</button></div>
       <input className="input" type="search" placeholder="Search name, phone or seat number" value={q} onChange={(e) => setQ(e.target.value)} />
-      <div className="flex flex-wrap gap-2">
-        {['Active', 'Left', 'All'].map((x) => <button key={x} onClick={() => setFilter(x)} className={filter === x ? 'btn-primary' : 'btn-ghost'}>{x}</button>)}
-        <span className="w-2" />
-        {['All', ...LIBS].map((x) => <button key={x} onClick={() => setLib(x)} className={lib === x ? 'btn-primary' : 'btn-ghost'}>{x === 'All' ? 'Both libraries' : x}</button>)}
+      <div className="flex gap-2">{['Active', 'Left', 'All'].map((x) => <button key={x} onClick={() => setFilter(x)} className={filter === x ? 'btn-primary' : 'btn-ghost'}>{x}</button>)}</div>
+      {list.length === 0 && <p className="card text-slate-600">No students found. Tap “Add student” to create one.</p>}
+      <div className="space-y-3">
+        {list.map((s) => <StudentCard key={s.id} s={s} settings={settings} onChange={reload} onEdit={(st) => setForm({ ...st })} />)}
       </div>
-      {visible.length === 0 && <p className="card text-slate-600">No students found. Tap “Add student” to create one.</p>}
-      {LIBS.filter((l) => lib === 'All' || l === lib).map((l) => {
-        const inLib = visible.filter((s) => libOf(s) === l)
-        if (!inLib.length) return null
-        return (
-          <section key={l} className="space-y-3">
-            <h2 className="rounded-lg bg-ink px-3 py-2 text-lg font-bold text-white">{l} library · {inLib.length}</h2>
-            {[[true, 'With locker'], [false, 'Without locker']].map(([lk, label]) => {
-              const g = inLib.filter((s) => !!s.locker === lk).sort((a, b) => a.seat_no - b.seat_no)
-              if (!g.length) return null
-              return (
-                <div key={label} className="space-y-3">
-                  <h3 className="text-sm font-bold text-slate-600">{label} ({g.length})</h3>
-                  {g.map((s) => <StudentCard key={s.id} s={s} settings={settings} onChange={reload} onEdit={(st) => setForm({ ...st, library: libOf(st), locker: !!st.locker })} />)}
-                </div>
-              )
-            })}
-          </section>
-        )
-      })}
       {form && <Form initial={form} settings={settings} students={students} onClose={() => setForm(null)} onSaved={() => { setForm(null); reload() }} />}
     </div>
   )

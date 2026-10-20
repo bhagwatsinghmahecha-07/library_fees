@@ -13,11 +13,11 @@ export const isDue = (s) => s.status === 'Active' && s.next_due_date <= today()
 export const fmtDate = (iso) => new Date(iso + 'T00:00').toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })
 export const rupees = (n) => '₹' + Number(n).toLocaleString('en-IN')
 
-export function fillMessage(template, s, ownerName = '') {
+export function fillMessage(template, s, ownerName = '', libraryName = '') {
   return template
     .replaceAll('{name}', s.full_name).replaceAll('{amount}', Number(s.monthly_fee))
     .replaceAll('{due_date}', fmtDate(s.next_due_date)).replaceAll('{seat}', s.seat_no)
-    .replaceAll('{library}', libOf(s)).replaceAll('{owner_name}', ownerName)
+    .replaceAll(' {library}', '').replaceAll('{library}', '').replaceAll('{owner_name}', ownerName).replaceAll('{library_name}', libraryName)
 }
 export function waLink(phone, text) {
   let digits = phone.replace(/\D/g, '')
@@ -25,12 +25,6 @@ export function waLink(phone, text) {
   return `https://wa.me/${digits}?text=${encodeURIComponent(text)}`
 }
 
-// Two libraries (Normal / Premium), each student with or without a locker
-export const LIBS = ['Normal', 'Premium']
-export const libOf = (s) => s.library || 'Normal'
-export const tag = (s) => `${libOf(s)}${s.locker ? ' + Locker' : ''}`
-export const seatsFor = (st, lib) => Number(lib === 'Premium' ? st.seats_premium : st.seats_normal)
-export const defaultFee = (st, lib, locker) => st[`fee_${lib.toLowerCase()}${locker ? '_locker' : ''}`] ?? ''
 
 // Advance reminder window: fee falls due tomorrow or the day after
 export const addDays = (iso, n) => { const [y, m, d] = iso.split('-').map(Number); return toISO(new Date(y, m - 1, d + n)) }
